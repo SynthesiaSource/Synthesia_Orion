@@ -13,7 +13,20 @@
 
  Written by Vlad Lavrovsky
  This project is supported by Synthesia Corporation
- Release under the GPL Licence Copyright (C) 2013 Synthesia Corporation
+ Release under the GPL Licence 
+ 
+ Copyright (C) 2013 Vlad Lavrovsky
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
  Inspired by code developed by Adafruit Industries. www.adafruit.com Distributed under the BSD license
  see license.txt for more information.  This paragraph must be included
  in any redistribution.
