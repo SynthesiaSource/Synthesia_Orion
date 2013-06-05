@@ -5,6 +5,9 @@ Source code for the Synthesia Orion belt.
 
 Copyright © 2013 Vlad Lavrovsky
 
+Supported by Synthesia Corporation.
+www.synthesia.ca
+
 Released under the GPL License.
 
 
