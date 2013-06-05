@@ -13,6 +13,8 @@
 
  Written by Vlad Lavrovsky
  This project is supported by Synthesia Corporation
+ www.synthesia.ca
+ 
  Release under the GPL Licence 
  
  Copyright (C) 2013 Vlad Lavrovsky
