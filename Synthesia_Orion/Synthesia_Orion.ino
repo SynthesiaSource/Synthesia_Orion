@@ -12,8 +12,9 @@
  These modes are programmed for non-locking operation, they allow the program to return to the main loop often for mode switching.
 
  Written by Vlad Lavrovsky
- Release under the MIT Licence Copyright (C) 2013 Synthesia Corporation
- Uses code written by Adafruit Industries.  Distributed under the BSD license
+ This project is supported by Synthesia Corporation
+ Release under the GPL Licence Copyright (C) 2013 Synthesia Corporation
+ Inspired by code developed by Adafruit Industries. www.adafruit.com Distributed under the BSD license
  see license.txt for more information.  This paragraph must be included
  in any redistribution.
 
@@ -299,9 +300,10 @@ void setup() {
   // Each animation is responsible for calibrating its own speed relative to the globalSpeed.
   globalSpeed = 0;
 
-  // Boot up the strip with power on
-  digitalWrite(PIN_STRIP_ENABLE, LOW);   
-  poweredOn = true;   
+  // Boot up the strip with power off
+  // Does not work without a battery if boots on LOW (on)
+  digitalWrite(PIN_STRIP_ENABLE, HIGH);   
+  poweredOn = false;   
   
     // Start up the LED strip
   strip.begin();
