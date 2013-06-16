@@ -1,6 +1,6 @@
-#include <PinChangeInt.h>
-#include <stdio.h>
-#include <LPD8806.h>
+#include "PinChangeInt.h"
+//#include <stdio.h>
+#include "LPD8806.h"
 #include "SPI.h"
 
 
