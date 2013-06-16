@@ -338,6 +338,7 @@ ISR(TIMER1_COMPA_vect)
 // All animations must be totally non-locking. That is, draw only one frame at a time.
 void loop() {
 
+  // These calls might be what is slowing down the driver.
   digitalWrite(PIN_LED_BLUE , digitalRead(PIN_BUTTON_SPEED));
   digitalWrite(PIN_LED_RED  , digitalRead(PIN_BUTTON_MODE));
   digitalWrite(PIN_LED_GREEN, digitalRead(PIN_BUTTON_POWER));
