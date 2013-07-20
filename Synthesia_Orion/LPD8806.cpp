@@ -64,8 +64,6 @@ a 'latch' anyway.
   Tested.  Confirmed.  Fact.
 */
 
-
-#include "SPI.h"
 #include "LPD8806.h"
 
 /*****************************************************************************/
@@ -74,6 +72,7 @@ a 'latch' anyway.
 LPD8806::LPD8806(uint16_t n) {
   pixels = NULL;
   begun  = false;
+  enabled = false;
   updateLength(n);
   updatePins();
 }
@@ -82,6 +81,7 @@ LPD8806::LPD8806(uint16_t n) {
 LPD8806::LPD8806(uint16_t n, uint8_t dpin, uint8_t cpin) {
   pixels = NULL;
   begun  = false;
+  enabled = false;
   updateLength(n);
   updatePins(dpin, cpin);
 }
@@ -95,11 +95,52 @@ LPD8806::LPD8806(void) {
   numLEDs = numBytes = 0;
   pixels  = NULL;
   begun   = false;
+  enabled = false;
   updatePins(); // Must assume hardware SPI until pins are set
 }
 
+void LPD8806::enable(boolean setBegun = false) {
+  // Power up the led strip.
+  digitalWrite(13, LOW);
+  delay(250);
+  
+  enabled = true;
+  
+  //if(setBegun)
+    begin();
+} // enable()
+
+
+void LPD8806::disable(void) {
+  // First, set the SPI mode such that the data and clock lines go low...
+  if(hardwareSPI == true) {
+    SPI.end();
+  }
+  
+  // ...then power off the led strip.
+  digitalWrite(13, HIGH);
+
+  // Finaly, set status flags to indicate the strip is powered down and disabled.
+  begun   = false;
+  enabled = false;
+} // disable()
+
+
+boolean LPD8806::isEnabled(void) {
+  return enabled;
+} // isEnabled()
+
+
+boolean LPD8806::isDisabled(void) {
+  return !enabled;
+} // isDisabled()
+
+
 // Activate hard/soft SPI as appropriate:
 void LPD8806::begin(void) {
+  if(! enabled)
+    return;
+  
   if(hardwareSPI == true) startSPI();
   else                    startBitbang();
   begun = true;
@@ -144,17 +185,20 @@ void LPD8806::updatePins(uint8_t dpin, uint8_t cpin) {
   hardwareSPI = false;
 }
 
-#ifndef SPI_CLOCK_DIV
-  #define SPI_CLOCK_DIV 8
+#ifndef SPI_CLOCK_DIV8
+  #define SPI_CLOCK_DIV8 4
 #endif
 
 // Enable SPI hardware and set up protocol details:
 void LPD8806::startSPI(void) {
+  if(! enabled)
+    return;
+    
   SPI.begin();
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE0);
-  SPI.setClockDivider(SPI_CLOCK_DIV);  // 2 MHz
-//  SPI.setClockDivider(SPI_CLOCK_DIV8);  // 2 MHz
+
+  SPI.setClockDivider(SPI_CLOCK_DIV8);  // 2 MHz
   // SPI bus is run at 2MHz.  Although the LPD8806 should, in theory,
   // work up to 20MHz, the unshielded wiring from the Arduino is more
   // susceptible to interference.  Experiment and see what you get.
@@ -166,17 +210,20 @@ void LPD8806::startSPI(void) {
   for(uint16_t i=((numLEDs+31)/32)-1; i>0; i--) {
     while(!(SPSR & (1<<SPIF))); // Wait for prior byte out
     SPDR = 0;                   // Issue next byte
-   }
+  }
 #else
   SPI.transfer(0);
-  //for(uint16_t i=((numLEDs+31)/32)-1; i>0; i--) {
-  //  SPI.transfer(0);
-  //}
+  for(uint16_t i=((numLEDs+31)/32)-1; i>0; i--) {
+    SPI.transfer(0);
+  }
 #endif
 }
 
 // Enable software SPI pins and issue initial latch:
 void LPD8806::startBitbang() {
+  if(! enabled)
+    return;
+    
   pinMode(datapin, OUTPUT);
   pinMode(clkpin , OUTPUT);
   if (dataport != 0) {
@@ -219,6 +266,12 @@ uint16_t LPD8806::numPixels(void) {
 // to sign an NDA or something stupid like that, but we reverse engineered
 // this from a strip controller and it seems to work very nicely!
 void LPD8806::show(void) {
+  if(! enabled)
+    return;
+
+  if(! begun)
+    return;
+        
   uint8_t  *ptr = pixels;
   uint16_t i    = numBytes;
 

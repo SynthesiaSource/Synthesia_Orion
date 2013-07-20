@@ -1,9 +1,14 @@
+#ifndef __LPD8806_H
+#define __LPD8806_H
+
 #if (ARDUINO >= 100)
  #include <Arduino.h>
 #else
  #include <WProgram.h>
  #include <pins_arduino.h>
 #endif
+
+#include <SPI.h>
 
 class LPD8806 {
 
@@ -19,7 +24,11 @@ class LPD8806 {
     setPixelColor(uint16_t n, uint32_t c),
     updatePins(uint8_t dpin, uint8_t cpin), // Change pins, configurable
     updatePins(void),                       // Change pins, hardware SPI
-    updateLength(uint16_t n);               // Change strip length
+    updateLength(uint16_t n),               // Change strip length
+    enable(boolean setBegun),  // Power up, activate SPI
+    disable(void);             // Power down, disable SPI
+    boolean isEnabled(void);   // 
+    boolean isDisabled(void);  // 
   uint16_t
     numPixels(void);
   uint32_t
@@ -42,5 +51,9 @@ class LPD8806 {
     startSPI(void);
   boolean
     hardwareSPI, // If 'true', using hardware SPI
-    begun;       // If 'true', begin() method was previously invoked
+    begun,       // If 'true', begin() method was previously invoked
+    enabled;     // If 'true', power up the strip and allow data push, else power down
 };
+
+#endif
+
