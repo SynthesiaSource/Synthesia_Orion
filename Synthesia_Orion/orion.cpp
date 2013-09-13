@@ -5,41 +5,28 @@
 byte stripBufferA[PIXEL_COUNT];
 byte stripBufferB[PIXEL_COUNT];
 
-uint32_t pixelBuffer[PIXEL_COUNT];
+boolean brightnessSemaphore = false;
+boolean speedSemaphore = false;
+boolean modeSemaphore = false;
 
 int animationStep; // Used for incrementing animations (0-384)
 int frameStep;     // Used to increment frame counts.
 int mode;          // System mode
-int speed;         // System animation speed control
+int syspeed;         // System animation speed control
 int brightness;    // System brightness control
 
 LPD8806 strip = LPD8806(PIXEL_COUNT);
 
 void stepMode(void) {
-  mode++;
-  delay(100);
-   
-  if(mode > NUMBER_OF_MODES)
-    mode = 0;
-     
-  frameStep = 0;
-  animationStep = 0;
+  modeSemaphore = true;  
 } // stepMode()
 
 void stepSpeed(void) {
-   speed++;
-  delay(100);
-
-   if(speed > NUMBER_SPEED_SETTINGS)
-     speed = 0;
+  speedSemaphore = true;
 } // stepSpeed()
 
 void stepBrightness(void) {
-   brightness++;
-   delay(100);
-     
-   if(brightness > NUMBER_BRIGHTNESS_LEVELS)
-     brightness = 1;
+  brightnessSemaphore = true;
 } // stepBrightness()
 
 void enable(boolean setBegun) {
@@ -125,17 +112,15 @@ void setPixelAtBrightness(int i, uint32_t c)
 
 
 void setupOrion() {
-  for(int u = 0; u<PIXEL_COUNT; u++)
-    pixelBuffer[u] = 0;
   
   // globalSpeed controls the delays in the animations. Starts low. Range is 1-5. 
   // Each animation is responsible for calibrating its own speed relative to the globalSpeed.
-  speed = 0;
+  syspeed = 0;
 
   animationStep = 0;
   frameStep = 0;
   mode = 0;
-  speed = 0;
+  syspeed = 0;
   brightness = 1;
 } // setupOrion()
 
@@ -144,6 +129,46 @@ void setupOrion() {
 // All animations must be totally non-blocking. That is, draw only one frame at a time.
 void updateOrion() {
     
+  if(brightnessSemaphore)
+  {  
+    noInterrupts();
+    delay(500);
+    brightness++;
+     
+   if(brightness > NUMBER_BRIGHTNESS_LEVELS)
+     brightness = 1;
+     
+     brightnessSemaphore = false;
+    interrupts();
+  }
+
+  if(speedSemaphore)
+  {  
+    noInterrupts();
+    delay(200);
+    syspeed++;
+    
+     if(syspeed > NUMBER_SPEED_SETTINGS)
+       syspeed = 0;
+       
+     speedSemaphore = false;
+    interrupts();
+  }
+  
+  if(modeSemaphore)
+  { 
+    noInterrupts();
+    delay(500);
+    mode++;
+     
+    if(mode > NUMBER_OF_MODES)
+      mode = 0;
+       
+    frameStep = 0;
+    animationStep = 0;
+    modeSemaphore = false;
+    interrupts();
+  }  
   // Used to store a current color for modes which cycle through colors.
   static uint32_t currentColor;
 
@@ -154,7 +179,7 @@ void updateOrion() {
   unsigned long currentMillis = millis();
 
   // If insufficient time has elapsed since the last call just return and do nothing.
-  if(currentMillis - previousMillis < frameDelayTimer*speed)    
+  if(currentMillis - previousMillis < frameDelayTimer*syspeed)    
     return;
     
   previousMillis = currentMillis;
@@ -184,14 +209,14 @@ void updateOrion() {
       // Single pixel random color pixel chase.
       if(animationStep == 0)
         currentColor =Wheel(random(0, 384));
-      colorChase(currentColor, speed);
+      colorChase(currentColor, syspeed);
       frameDelayTimer = 5;    
       break;
     case 6:
       // Random color wipe.
       if(frameStep == 0)
         currentColor = Wheel(random(0, 384));
-      colorWipe(currentColor, speed);
+      colorWipe(currentColor, syspeed);
       frameDelayTimer = 5;    
       break;
     case 7:
@@ -199,26 +224,26 @@ void updateOrion() {
       {
         long randNumber = random(0, 384);
         uint32_t c = Wheel(((randNumber * 384 / strip.numPixels()) + randNumber) % 384);
-        dither(c, speed);
+        dither(c, syspeed);
       }  
       frameDelayTimer = 8;    
       break;
     case 8:
       if(animationStep == 0)
         currentColor = Wheel(random(0, 384));
-      scanner(currentColor, speed);  
+      scanner(currentColor, syspeed);  
       frameDelayTimer = 5;    
       break;
     case 9:
       // Sin wave effect. New color every cycle.
       if(animationStep == 0)
         currentColor = Wheel(random(0, 384));
-      wave(currentColor, speed);  
+      wave(currentColor, syspeed);  
       frameDelayTimer = 5;    
       break;
     case 10:
       // Random color noise animation.
-      randomSparkle(speed);
+      randomSparkle(syspeed);
       frameDelayTimer = 3;    
       break;
     case 11:
@@ -363,7 +388,6 @@ void rainbow() {
 
       for (i=0; i < strip.numPixels(); i++) 
       {
-        //strip.setPixelColor(i, Wheel(((i * 384 / pixelCount) + animationStep) % 384));
         setPixelAtBrightness(i, Wheel(((i * 384 / pixelCount) + animationStep) % 384));
       }
       strip.show();   // write all the pixels out
@@ -371,10 +395,7 @@ void rainbow() {
 
 void splitColorBuilder() {
   uint16_t i, j;
-  int pixelCount = strip.numPixels();
-//  pixelBuffer[0] = Wheel((sin(animationStep)+1)*384);
-//  pixelBuffer[1] = Wheel((sin(animationStep)+1)*384);
-  
+  int pixelCount = strip.numPixels();  
   uint32_t c = Wheel(animationStep);
   float y = (sin(PI * 1 * (float)(animationStep) / (float)strip.numPixels()/4))+1;
   byte  r, g, b, r2, g2, b2;
@@ -388,66 +409,20 @@ void splitColorBuilder() {
   g2 = 127 - (byte)((float)(127 - g) * y);
   b2 = 127 - (byte)((float)(127 - b) * y);
   
-  pixelBuffer[0] = strip.Color(r2, g2, b2);
-
-  for (i=0; i < strip.numPixels()/2; i++) 
+  for (i=0; i < (strip.numPixels()/2)+1; i++) 
   {
-    setPixelAtBrightness(PIXEL_COUNT/2-i, pixelBuffer[i]);
-    setPixelAtBrightness(PIXEL_COUNT/2+i, pixelBuffer[i]); 
+    setPixelAtBrightness(PIXEL_COUNT/2-i, strip.Color(r2,g2,b2));
+    setPixelAtBrightness(PIXEL_COUNT/2+i, strip.Color(r2,g2,b2)); 
   }
   
   strip.show();   // write all the pixels out
-  
-  for(int k = PIXEL_COUNT-1; k>0; k--)
-  {
-   pixelBuffer[k] = pixelBuffer[k-1]; 
-  }
-
 
 }
-
-//void splitColorBuilder() {
-//  uint16_t i, j;
-//  int pixelCount = strip.numPixels();
-////  pixelBuffer[0] = Wheel((sin(animationStep)+1)*384);
-////  pixelBuffer[1] = Wheel((sin(animationStep)+1)*384);
-//  
-//  uint32_t c = Wheel(animationStep);
-//  float y = (sin(PI * 1 * (float)(animationStep) / (float)strip.numPixels()/4))+1;
-//  byte  r, g, b, r2, g2, b2;
-//
-//  // Need to decompose color into its r, g, b elements
-//  g = (c >> 16) & 0x7f;
-//  r = (c >>  8) & 0x7f;
-//  b =  c        & 0x7f; 
-//  
-//  r2 = 127 - (byte)((float)(127 - r) * y);
-//  g2 = 127 - (byte)((float)(127 - g) * y);
-//  b2 = 127 - (byte)((float)(127 - b) * y);
-//  
-//  pixelBuffer[0] = strip.Color(r2, g2, b2);
-//
-//  for (i=0; i < strip.numPixels()/2; i++) 
-//  {
-//    setPixelAtBrightness(PIXEL_COUNT/2-i, pixelBuffer[i]);
-//    setPixelAtBrightness(PIXEL_COUNT/2+i, pixelBuffer[i]); 
-//  }
-//  
-//  strip.show();   // write all the pixels out
-//  
-//  for(int k = PIXEL_COUNT-1; k>0; k--)
-//  {
-//   pixelBuffer[k] = pixelBuffer[k-1]; 
-//  }
-//
-//
-//}
 
 void smoothColors() {
   uint16_t i, j;
   int pixelCount = strip.numPixels();
   uint32_t c = Wheel(((i * 384 / pixelCount) + animationStep) % 384);
-  pixelBuffer[0] = c;
   
       for (i=0; i < strip.numPixels(); i++) 
       {

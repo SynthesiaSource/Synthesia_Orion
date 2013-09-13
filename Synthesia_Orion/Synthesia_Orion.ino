@@ -8,13 +8,22 @@
 boolean poweredOn = false;
 
 //
-void togglePower(void) {
+void togglePower(void) 
+{
+  noInterrupts();
   poweredOn = !poweredOn;
-  updateBatteryStatus(poweredOn);
+  
+  if(poweredOn)
+  {
+    updateBatteryStatus(poweredOn);
+    updateOrion();
+  }
+  interrupts();
 } // togglePower()
 
 
-void setup() {
+void setup() 
+{
   setupPins();
   
   // Make the ADC use the nternal 2.56v reference.
@@ -24,10 +33,14 @@ void setup() {
   poweredOn = false; 
   
   // Attach button interrupts
+  interrupts();
   PCintPort::attachInterrupt(PIN_BUTTON_MODE, &stepMode, FALLING);
   PCintPort::attachInterrupt(PIN_BUTTON_SPEED, &stepSpeed, FALLING);
   attachInterrupt(INT1, &stepBrightness, FALLING);
   attachInterrupt(INT0, &togglePower, FALLING);
+// Does not work. ???
+//  attachInterrupt(PIN_BUTTON_LEVEL, &stepBrightness, FALLING);
+//  attachInterrupt(PIN_BUTTON_POWER, &togglePower, FALLING);
   
   setupBatteryStatusInterrupt();  
   setupOrion();
@@ -50,12 +63,11 @@ void loop() {
     forceStatusLightOff();
     // Define sleep type
     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-   interrupts();
    // Attach the awake interrupt to the power button
-   attachInterrupt(INT0,sleepHandler, FALLING); 
+   //attachInterrupt(INT0,sleepHandler, FALLING); 
    sleep_enable();
    sleep_mode();  //sleep now
-   sleep_disable(); //fully awake now
+   sleep_disable(); //fully awake now 
   }
 
   // Update the LEDs if the device is enabled
@@ -64,15 +76,5 @@ void loop() {
     updateOrion();
   }
 
-
-} // loop()
-
-
-// On-awake functions.
-void sleepHandler() {
-  // Turn the LEDs back on
-  togglePower();
 }
-
-// End of file.
 
